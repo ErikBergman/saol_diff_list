@@ -101,6 +101,12 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--timeout", type=int, default=180)
     parser.add_argument("--retries", type=int, default=3)
+    parser.add_argument(
+        "--min-total-tokens",
+        type=int,
+        default=500_000,
+        help="Exclude years below this total token count from plotted frequencies.",
+    )
     return parser.parse_args()
 
 
@@ -169,14 +175,38 @@ def compute_relative_per_million(
     return rel
 
 
+def apply_min_token_filter(
+    rel: Dict[int, Optional[float]],
+    totals: Dict[int, Optional[int]],
+    years: List[int],
+    min_total_tokens: int,
+) -> Tuple[Dict[int, Optional[float]], Dict[int, bool]]:
+    filtered: Dict[int, Optional[float]] = {}
+    included: Dict[int, bool] = {}
+    for year in years:
+        value = rel.get(year)
+        total = totals.get(year)
+        ok = isinstance(total, int) and total >= min_total_tokens
+        included[year] = bool(ok)
+        if value is None or not ok:
+            filtered[year] = None
+        else:
+            filtered[year] = value
+    return filtered, included
+
+
 def write_csv(
     path: Path,
     years: List[int],
     totals: Dict[int, Optional[int]],
     hvarfor_abs: Dict[int, Optional[int]],
     varfor_abs: Dict[int, Optional[int]],
-    hvarfor_rel: Dict[int, Optional[float]],
-    varfor_rel: Dict[int, Optional[float]],
+    hvarfor_rel_raw: Dict[int, Optional[float]],
+    varfor_rel_raw: Dict[int, Optional[float]],
+    hvarfor_rel_filtered: Dict[int, Optional[float]],
+    varfor_rel_filtered: Dict[int, Optional[float]],
+    included_by_filter: Dict[int, bool],
+    min_total_tokens: int,
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8", newline="") as f:
@@ -187,8 +217,12 @@ def write_csv(
                 "total_tokens",
                 "hvarfor_abs",
                 "varfor_abs",
-                "hvarfor_per_million",
-                "varfor_per_million",
+                "hvarfor_per_million_raw",
+                "varfor_per_million_raw",
+                "min_total_tokens_filter",
+                "included_by_min_tokens_filter",
+                "hvarfor_per_million_filtered",
+                "varfor_per_million_filtered",
             ]
         )
         for year in years:
@@ -198,8 +232,12 @@ def write_csv(
                     totals.get(year),
                     hvarfor_abs.get(year),
                     varfor_abs.get(year),
-                    hvarfor_rel.get(year),
-                    varfor_rel.get(year),
+                    hvarfor_rel_raw.get(year),
+                    varfor_rel_raw.get(year),
+                    min_total_tokens,
+                    int(included_by_filter.get(year, False)),
+                    hvarfor_rel_filtered.get(year),
+                    varfor_rel_filtered.get(year),
                 ]
             )
 
@@ -209,6 +247,7 @@ def make_plot(
     years: List[int],
     hvarfor_rel: Dict[int, Optional[float]],
     varfor_rel: Dict[int, Optional[float]],
+    min_total_tokens: int,
 ) -> None:
     try:
         import matplotlib.pyplot as plt
@@ -228,7 +267,10 @@ def make_plot(
     plt.figure(figsize=(12, 6))
     plt.scatter(hvarfor_x, hvarfor_y, label="hvarför", s=16)
     plt.scatter(varfor_x, varfor_y, label="varför", s=16)
-    plt.title('Relative Frequency in Korp Bundles: "hvarför" vs "varför"')
+    plt.title(
+        'Relative Frequency in Korp Bundles: "hvarför" vs "varför"\n'
+        f"(filtered: total_tokens >= {min_total_tokens})"
+    )
     plt.xlabel("Year")
     plt.ylabel("Frequency per million tokens")
     plt.grid(True, alpha=0.3)
@@ -294,11 +336,17 @@ def main() -> int:
         word_abs[word] = to_year_dict(combined)
 
     years = list(range(args.from_year, args.to_year + 1))
-    hvarfor_rel = compute_relative_per_million(
+    hvarfor_rel_raw = compute_relative_per_million(
         word_abs["hvarför"], totals, args.from_year, args.to_year
     )
-    varfor_rel = compute_relative_per_million(
+    varfor_rel_raw = compute_relative_per_million(
         word_abs["varför"], totals, args.from_year, args.to_year
+    )
+    hvarfor_rel_filtered, included_by_filter = apply_min_token_filter(
+        hvarfor_rel_raw, totals, years, args.min_total_tokens
+    )
+    varfor_rel_filtered, _ = apply_min_token_filter(
+        varfor_rel_raw, totals, years, args.min_total_tokens
     )
 
     csv_path = Path(args.output_csv)
@@ -309,13 +357,35 @@ def main() -> int:
         totals,
         word_abs["hvarför"],
         word_abs["varför"],
-        hvarfor_rel,
-        varfor_rel,
+        hvarfor_rel_raw,
+        varfor_rel_raw,
+        hvarfor_rel_filtered,
+        varfor_rel_filtered,
+        included_by_filter,
+        args.min_total_tokens,
     )
-    make_plot(png_path, years, hvarfor_rel, varfor_rel)
+    make_plot(
+        png_path,
+        years,
+        hvarfor_rel_filtered,
+        varfor_rel_filtered,
+        args.min_total_tokens,
+    )
+
+    excluded_years = [
+        y
+        for y in years
+        if totals.get(y) is not None
+        and isinstance(totals.get(y), int)
+        and totals.get(y) < args.min_total_tokens
+    ]
 
     print(f"Saved CSV: {csv_path}")
     print(f"Saved plot: {png_path}")
+    print(
+        f"Filtered out {len(excluded_years)} years with "
+        f"total_tokens < {args.min_total_tokens}."
+    )
     print(f"Downloaded response payload (bytes): {total_downloaded}")
     return 0
 
