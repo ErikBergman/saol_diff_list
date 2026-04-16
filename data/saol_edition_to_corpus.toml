@@ -1,0 +1,85 @@
+# One representative Korp corpus per edition code.
+# Selection principle: prefer newspaper or news-like corpora where possible so the
+# medium stays reasonably consistent across editions. Where the local shortlist
+# does not include a newspaper, this file falls back to the broadest print-like
+# corpus available in the existing project notes.
+#
+# Source for most pairings:
+# documentation/korp_time_period_report.md
+#
+# Note:
+# - `a55-dln` predates SAOL edition 1 but is present in the local lexicon chain.
+# - `t09-so1` is not listed in the report's recommended bundles; it is mapped here
+#   to the nearest available modern news corpus already used in the repo.
+
+[a55-dln]
+year = 1855
+# corpus years: 1850-1859
+corpus = "KUBHIST2-AFTONBLADET-1850"
+medium = "newspaper"
+
+[a74-s01]
+year = 1874
+# corpus years: 1870-1879
+corpus = "KUBHIST2-AFTONBLADET-1870"
+medium = "newspaper"
+
+[a89-s06]
+year = 1889
+# corpus years: 1880-1889
+corpus = "KUBHIST2-AFTONBLADET-1880"
+medium = "newspaper"
+
+[n00-s07]
+year = 1900
+# corpus years: 1900-1909
+corpus = "KUBHIST2-AFTONBLADET-1900"
+medium = "newspaper"
+
+[n23-s08]
+year = 1923
+# corpus years: 1920-1929
+corpus = "KUBHIST-DALPILEN-1920"
+medium = "newspaper"
+
+[n30-bng]
+year = 1930
+# corpus years: 1909-1940, except 1918 and 1921
+corpus = "RUNEBERG-TIDEN"
+medium = "periodical"
+
+[n50-s09]
+year = 1950
+# corpus years: mainly first half of the 20th century; material extends from the late 19th century onward
+corpus = "SBS-FOLKE"
+medium = "periodical"
+
+[n73-s10]
+year = 1973
+# corpus years: 1960-1979
+corpus = "ASTRA1960-1979"
+medium = "periodical"
+
+[n86-s11]
+year = 1986
+# corpus years: exact text-year span not stated in the available metadata; the corpus was assembled within the PAROLE project, completed in 1997
+corpus = "PAROLE"
+medium = "mixed_prose"
+
+[n98-s12]
+year = 1998
+# corpus years: 1998 only
+corpus = "PRESS98"
+medium = "newspaper"
+
+[t06-s13]
+year = 2006
+# corpus years: 2006 only
+corpus = "WEBBNYHETER2006"
+medium = "web_news"
+
+[t09-so1]
+year = 2009
+# corpus years: 2006 only
+corpus = "WEBBNYHETER2006"
+medium = "web_news"
