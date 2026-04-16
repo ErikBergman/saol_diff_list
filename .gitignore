@@ -2,3 +2,4 @@
 .venv
 __pycache__
 data/removed_words
+data/removed_words_frequency
